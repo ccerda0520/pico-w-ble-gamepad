@@ -1,0 +1,11 @@
+*.swp
+*.swo
+*.d
+*.o
+*.bin
+*.elf
+*.hex
+*.log
+.build/
+.vscode/
+.idea/
