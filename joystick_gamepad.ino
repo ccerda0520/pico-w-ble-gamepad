@@ -12,7 +12,7 @@ int joystickYState = 0;
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Start Joystick demo.");
+  // Serial.println("Start Joystick demo.");
   JoystickBLE.begin("Pico Joystick");
 
   // setting to pullup resistors so that a button press is registered
@@ -25,31 +25,27 @@ void setup() {
   }
 }
 
+unsigned long lastSend = 0;
+unsigned long debounceDelay = 75; 
+
 void loop() {
   // batching the instructions to prevent packet loss / overload
   JoystickBLE.useManualSend(true);
 
-  // // Check if the button is pressed (LOW means pressed because of pull-up resistor)
-  for (int i=0; i<11; i++) {
-    bool pressed = digitalRead(buttonPins[i]) == LOW;  // active low
-    JoystickBLE.button(buttonIds[i], pressed);
-
-    if (pressed) {
-      Serial.print("Button is pressed: ");
-      Serial.println(buttonIds[i]);
+  if (millis() - lastSend > debounceDelay) {
+    // // Check if the button is pressed (LOW means pressed because of pull-up resistor)
+    for (int i=0; i<11; i++) {
+      bool pressed = digitalRead(buttonPins[i]) == LOW;  // active low
+      JoystickBLE.button(buttonIds[i], pressed);
     }
-  }
 
-  // digital joystick mapping
-  for (int i=0; i<4; i++) {
-    bool joyPressed = digitalRead(joyPins[i]) == LOW;
-    JoystickBLE.button(joyButtonIds[i], joyPressed);
-
-    if (joyPressed) {
-      Serial.println((String)"joy Button is pressed: " + joyButtonIds[i]);
+    // digital joystick mapping
+    for (int i=0; i<4; i++) {
+      bool joyPressed = digitalRead(joyPins[i]) == LOW;
+      JoystickBLE.button(joyButtonIds[i], joyPressed);
     }
+    
+    JoystickBLE.send_now();
+    lastSend = millis();
   }
-  
-  JoystickBLE.send_now();
-  delay(50);
 }
