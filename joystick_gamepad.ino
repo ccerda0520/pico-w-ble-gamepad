@@ -11,9 +11,11 @@ int joystickXState = 0;
 int joystickYState = 0;
 
 void setup() {
-  Serial.begin(115200);
-  // Serial.println("Start Joystick demo.");
   JoystickBLE.begin("Pico Joystick");
+
+  // batching the instructions to prevent packet loss / overload
+  JoystickBLE.useManualSend(true); 
+
 
   // setting to pullup resistors so that a button press is registered
   for (int i=0; i<11; i++) {
@@ -26,26 +28,42 @@ void setup() {
 }
 
 unsigned long lastSend = 0;
-unsigned long debounceDelay = 75; 
+unsigned long debounceDelay = 30; 
+
+bool buttonLastStates[11] = {false};
+bool joyLastStates[4] = {false};
 
 void loop() {
-  // batching the instructions to prevent packet loss / overload
-  JoystickBLE.useManualSend(true);
+  // only send ble report if something actually changed
+  bool didChange = false;
 
   if (millis() - lastSend > debounceDelay) {
     // // Check if the button is pressed (LOW means pressed because of pull-up resistor)
     for (int i=0; i<11; i++) {
       bool pressed = digitalRead(buttonPins[i]) == LOW;  // active low
-      JoystickBLE.button(buttonIds[i], pressed);
+
+      if (pressed != buttonLastStates[i]) {
+        JoystickBLE.button(buttonIds[i], pressed);
+        buttonLastStates[i] = pressed;
+        didChange = true;
+      }
+      
     }
 
     // digital joystick mapping
     for (int i=0; i<4; i++) {
       bool joyPressed = digitalRead(joyPins[i]) == LOW;
-      JoystickBLE.button(joyButtonIds[i], joyPressed);
+      
+      if (joyPressed != joyLastStates[i]) {
+        JoystickBLE.button(joyButtonIds[i], joyPressed);
+        joyLastStates[i] = joyPressed;
+        didChange = true;
+      }
     }
     
-    JoystickBLE.send_now();
-    lastSend = millis();
+    if (didChange) {
+      JoystickBLE.send_now();
+      lastSend = millis();
+    }
   }
 }
